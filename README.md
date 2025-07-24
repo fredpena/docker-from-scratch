@@ -8,6 +8,25 @@ finalizar, no solo entiendas qué es Docker, sino que seas capaz de crear tus pr
 multi-contenedor y comprender cómo se integra en un flujo de trabajo de desarrollo moderno.
 ---
 
+## Descargo de responsabilidad
+
+* La información proporcionada en esta presentación tiene como objetivo educativo y se basa en experiencia personal y
+  conocimientos actuales. Si bien se ha hecho todo lo posible para garantizar la precisión y la actualidad de la
+  información presentada, no se puedo garantizar su exactitud completa.
+
+* El uso de las tecnologías mencionadas, está sujeto a los términos y condiciones de cada herramienta. Es
+  responsabilidad del usuario realizar su propia investigación y cumplir con las directrices y políticas de cada
+  tecnología antes de implementarlas en su entorno de producción.
+
+* Además, cabe señalar que las mejores prácticas y las soluciones presentadas en esta presentación pueden variar según
+  los requisitos y las circunstancias específicas de cada proyecto. Recomiendo encarecidamente realizar pruebas
+  exhaustivas y consultar con profesionales capacitados antes de implementar cualquier solución en un entorno de
+  producción.
+
+* En resumen, mientras que esta presentación busca proporcionar información útil y práctica, el uso de las tecnologías y
+  las decisiones de implementación son responsabilidad del usuario final. No se asume ninguna responsabilidad por los
+  resultados derivados de la aplicación de los conceptos discutidos en esta presentación.
+
 ## 🧰 Requisitos Técnicos Previos
 
 * [Java 21+](https://adoptium.net/)
