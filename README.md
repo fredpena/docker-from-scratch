@@ -122,12 +122,12 @@ docker images
 
 ### Interactuando con un Contenedor: El Poder de `docker exec`
 
-Una de las capacidades más potentes de Docker es que cada contenedor es un entorno Linux aislado. A veces, necesitas "
-entrar" en ese entorno para depurar un problema, verificar que un archivo se copió correctamente o simplemente explorar
+Una de las capacidades más potentes de Docker es que cada contenedor es un entorno Linux aislado. A veces, necesitas
+"entrar" en ese entorno para depurar un problema, verificar que un archivo se copió correctamente o simplemente explorar
 su contenido. Para esto, usamos el comando `docker exec`.
 
-Este comando nos permite ejecutar un proceso (como una terminal) dentro de un contenedor que **ya está en funcionamiento
-**.
+Este comando nos permite ejecutar un proceso (como una terminal) dentro de un contenedor que
+**ya está en funcionamiento**.
 
 ### Ejercicio Práctico: Conectándonos a la Terminal de Contenedor Genérico
 
