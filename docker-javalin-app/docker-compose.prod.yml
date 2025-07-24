@@ -1,0 +1,44 @@
+# docker-compose.prod.yml
+
+# Este archivo es para un escenario de despliegue.
+# En lugar de construir la imagen localmente con 'build: .',
+# se utiliza 'image:' para descargar la imagen pre-construida desde Docker Hub.
+
+services:
+  app:
+    # ¡Este es el cambio clave!
+    # Especificamos la imagen a usar desde Docker Hub.
+    # Asegúrate de que esta imagen exista y sea pública en tu cuenta.
+    image: fredpena/docker-javalin-app:1.0
+    container_name: mi-app-compose
+    ports:
+      - "7171:7070"
+    environment:
+      - DB_HOST=db
+    networks:
+      - taller-net
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:15-alpine
+    container_name: mi-postgres-compose
+    environment:
+      - POSTGRES_PASSWORD=mysecretpassword
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - taller-net
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  taller-net:
+    driver: bridge
+
+volumes:
+  db-data:

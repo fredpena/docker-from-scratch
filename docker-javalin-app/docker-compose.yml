@@ -1,0 +1,68 @@
+# docker-compose.yml
+
+# 'services' es la sección principal donde se definen los contenedores que componen la aplicación.
+services:
+  # Definición del servicio de la aplicación Java.
+  app:
+    # 'build: .' le dice a Compose que construya una imagen a partir del Dockerfile
+    # que se encuentra en el mismo directorio que este archivo.
+    build: .
+    # 'container_name' le da un nombre fijo al contenedor para facilitar su identificación.
+    container_name: mi-app-compose
+    # 'ports' mapea un puerto del host (izquierda) a un puerto del contenedor (derecha).
+    # Acceder a localhost:7171 en tu máquina te conectará al puerto 7070 del contenedor.
+    ports:
+      - "7171:7070"
+    # 'environment' define variables de entorno dentro del contenedor.
+    # Aquí le decimos a nuestra app Java dónde encontrar la base de datos.
+    # 'db' es el nombre del servicio de PostgreSQL definido más abajo.
+    environment:
+      - DB_HOST=db
+    # 'networks' conecta este servicio a una red específica.
+    networks:
+      - taller-net
+    # 'depends_on' asegura que el servicio 'app' no inicie hasta que el servicio 'db'
+    # esté completamente saludable y listo para aceptar conexiones.
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # Definición del servicio de la base de datos PostgreSQL.
+  db:
+    # 'image' especifica la imagen de Docker Hub que se usará. Usamos la versión 'alpine' por ser más ligera.
+    image: postgres:15-alpine
+    # Nombre fijo para el contenedor de la base de datos.
+    container_name: mi-postgres-compose
+    # Variables de entorno necesarias para configurar el contenedor de PostgreSQL.
+    environment:
+      - POSTGRES_PASSWORD=mysecretpassword
+      # Por defecto, postgres usa el usuario 'postgres', así que no es necesario definirlo.
+    # 'volumes' se usa para la persistencia de datos.
+    volumes:
+      # 'db-data' es un volumen nombrado gestionado por Docker.
+      # Se monta en la ruta donde PostgreSQL guarda sus datos.
+      # Esto asegura que los datos de la base de datos no se pierdan si el contenedor se reinicia o se elimina.
+      - db-data:/var/lib/postgresql/data
+      #- ./db-data:/var/lib/postgresql/data
+    # Conecta este servicio a la misma red que la aplicación.
+    networks:
+      - taller-net
+    # 'healthcheck' permite a Docker verificar si el contenedor está saludable.
+    # En este caso, comprueba si se puede conectar a la base de datos.
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+# 'networks' es la sección donde se definen las redes personalizadas.
+networks:
+  # Define una red de tipo 'bridge' llamada 'taller-net'.
+  # Los servicios en la misma red bridge pueden comunicarse entre sí por su nombre de servicio.
+  taller-net:
+    driver: bridge
+
+# 'volumes' es la sección donde se declaran los volúmenes nombrados.
+volumes:
+  # Declara el volumen 'db-data' que será gestionado por Docker.
+  db-data:
