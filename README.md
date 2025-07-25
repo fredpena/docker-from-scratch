@@ -970,6 +970,49 @@ Ahora, abre tu navegador y ve a `http://localhost`. ¡No uses el puerto `7171`! 
 Cada vez que refresques la página, Nginx estará enviando tu petición a una de las tres instancias de la aplicación de
 forma transparente. ¡Has escalado tu aplicación!
 
+### ¿Cómo decide Nginx a qué instancia enviar el tráfico? Métodos de Balanceo
+
+Por defecto, Nginx utiliza un método de balanceo de carga llamado **Round Robin** (turno rotatorio), que es el que has
+visto en acción: envía cada nueva petición a la siguiente instancia en la lista. Sin embargo, existen métodos más
+avanzados para escenarios más complejos.
+
+Aquí tienes los más comunes:
+
+| Método                   | Criterio de Decisión                                    | Ideal para...                                                                                     |
+|--------------------------|---------------------------------------------------------|---------------------------------------------------------------------------------------------------|
+| **Round Robin**          | Simplemente el siguiente en la lista (turno).           | Aplicaciones sin estado (`stateless`) donde todas las peticiones son rápidas y similares.         |
+| **Least Connections**    | El servidor con menos conexiones activas.               | Peticiones con duraciones variables. Maximiza el rendimiento.                                     |
+| **IP Hash**              | La dirección IP del cliente.                            | Aplicaciones con estado (`stateful`) que requieren "sesiones pegajosas" (ej. carritos de compra). |
+| **Weighted Round Robin** | El turno, pero dando más peticiones a los más potentes. | Infraestructura con servidores de diferente capacidad.                                            |
+
+Para cambiar el método, simplemente añadirías la directiva correspondiente en el bloque `upstream` de tu archivo
+`nginx.conf`.
+
+**Ejemplo para usar "Least Connections":**
+
+```nginx configuration
+# nginx/nginx.conf
+upstream javalin_app {
+    least_conn; # <-- ¡Solo se añade esta línea!
+    server app:7070;
+}
+# ... resto de la configuración
+```
+
+**Ejemplo para usar "IP Hash" (sesiones pegajosas):**
+
+```nginx configuration
+# nginx/nginx.conf
+upstream javalin_app {
+    ip_hash; # <-- ¡Solo se añade esta línea!
+    server app:7070;
+}
+# ... resto de la configuración
+```
+
+Con solo añadir una de esas líneas en tu archivo `nginx.conf`, cambias completamente la estrategia de cómo **Nginx**
+distribuye el tráfico entre tus contenedores.
+
 <h2 id="part-6">🔹 Buenas Prácticas y Tips</h2>
 
 #### Para detener todo:
