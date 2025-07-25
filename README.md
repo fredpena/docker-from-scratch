@@ -50,6 +50,8 @@ multi-contenedor y comprender cómo se integra en un flujo de trabajo de desarro
 
 #### [Orquestación con Docker Compose](#part-5)
 
+#### [Escalando la Aplicación con Docker Compose](#part-5-bonus)
+
 #### [Buenas Prácticas y Tips](#part-6)
 
 #### [BONUS: Docker en un Flujo de CI/CD Real](#part-7)
@@ -830,7 +832,151 @@ Con la aplicación corriendo (`docker compose up -d`), abre tu navegador y visit
 _**Has orquestado una aplicación multi-contenedor completa con un solo archivo y un solo comando, aplicando todos los
 conceptos aprendidos en el taller.**_
 
+<h2 id="part-5-bonus">Escalando la Aplicación con Docker Compose</h2>
+
+Hemos creado una aplicación funcional, pero ¿qué pasa si recibe mucho tráfico? Necesitamos poder ejecutar múltiples
+instancias de nuestra aplicación para distribuir la carga. A esto se le llama **escalado horizontal**.
+
+Docker Compose hace que esto sea increíblemente fácil con el comando `scale`, pero requiere un pequeño ajuste en nuestra
+arquitectura: añadir un **Reverse Proxy**.
+
+### El Problema: Conflicto de Puertos
+
+Si intentáramos escalar nuestro servicio `app` a 3 instancias usando el `docker-compose.scale.ymll` actual, solo la
+primera
+funcionaría. Las otras dos fallarían porque intentarían usar el mismo puerto del host (`7171`), que ya estaría ocupado.
+
+### La Solución: Nginx como Balanceador de Carga
+
+Añadiremos un nuevo servicio, **Nginx**, que actuará como un "portero":
+
+1. Será el único servicio que exponga un puerto al exterior (ej. puerto 80).
+2. Recibirá todas las peticiones de los usuarios.
+3. Distribuirá inteligentemente el tráfico entre todas las instancias de nuestra aplicación Java, que ahora se
+   ejecutan de forma privada dentro de la red de Docker.
+
+### Ejercicio Práctico: Escalar a 3 Instancias
+
+#### 1. Crea la configuración de Nginx:
+
+Primero, crea una nueva carpeta llamada `nginx` en la raíz de tu proyecto. Dentro de esa carpeta, crea un archivo
+llamado `nginx.conf` con el siguiente contenido:
+
+```nginx configuration
+# nginx/nginx.conf
+upstream javalin_app {
+    # Docker Compose resolverá el nombre 'app' a las IPs de todas las instancias escaladas.
+    # Nginx balanceará la carga entre ellas.
+    server app:7070;
+}
+
+server {
+    # Nginx escuchará en el puerto 80 dentro de su contenedor.
+    listen 80;
+
+    location / {
+        # Cuando llegue una petición, la reenviará al grupo de servidores.
+        proxy_pass http://javalin_app;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+#### 2. Crea `docker-compose.scale.yml`:
+
+Actualiza tu `docker-compose.scale.yml` para añadir el servicio `proxy` y, muy importante, eliminar la sección `ports`
+del servicio `app`.
+
+```yml
+# docker-compose.scale.yml (versión para escalar)
+services:
+  # Nuevo servicio: Reverse Proxy con Nginx
+  proxy:
+    image: nginx:1.25-alpine
+    container_name: mi-proxy-nginx
+    ports:
+      # Expone el puerto 80 del host. ¡Este es ahora nuestro único punto de entrada!
+      - "80:80"
+    volumes:
+      # Monta nuestro archivo de configuración personalizado.
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+    networks:
+      - taller-net
+    depends_on:
+      - app
+
+  app:
+    build: .
+    # YA NO EXPONEMOS PUERTOS AL HOST.
+    # La comunicación será interna a través de la red de Docker.
+    # ports:
+    #   - "7171:7070"
+    environment:
+      - DB_HOST=db
+    networks:
+      - taller-net
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:15-alpine
+    container_name: mi-postgres-compose
+    environment:
+      - POSTGRES_PASSWORD=mysecretpassword
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - taller-net
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  taller-net:
+    driver: bridge
+
+volumes:
+  db-data:
+```
+
+#### 3. Levanta y escala la aplicación:
+
+Ahora, usa este comando para levantar todo y, al mismo tiempo, decirle a Compose que quieres **3 réplicas** del servicio
+`app`.
+
+```shell
+docker compose -f docker-compose.scale.yml up -d --build --scale app=3
+```
+
+#### 4. Verifica el resultado:
+
+Primero, comprueba que tienes todos los contenedores corriendo.
+
+```shell
+docker compose ps
+```
+
+Deberías ver 5 contenedores: 1 `proxy`, 3 `app` y 1 `db`.
+
+Ahora, abre tu navegador y ve a `http://localhost`. ¡No uses el puerto `7171`! El punto de entrada ahora es el puerto
+80 (el puerto por defecto de la web).
+
+Cada vez que refresques la página, Nginx estará enviando tu petición a una de las tres instancias de la aplicación de
+forma transparente. ¡Has escalado tu aplicación!
+
 <h2 id="part-6">🔹 Buenas Prácticas y Tips</h2>
+
+#### Para detener todo:
+
+```shell
+docker compose down
+```
 
 ### Optimización de Imágenes
 

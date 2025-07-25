@@ -1,0 +1,52 @@
+# docker-compose.scale.yml (versión para escalar)
+services:
+  # Nuevo servicio: Reverse Proxy con Nginx
+  proxy:
+    image: nginx:1.25-alpine
+    container_name: mi-proxy-nginx
+    ports:
+      # Expone el puerto 80 del host. ¡Este es ahora nuestro único punto de entrada!
+      - "80:80"
+    volumes:
+      # Monta nuestro archivo de configuración personalizado.
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+    networks:
+      - taller-net
+    depends_on:
+      - app
+
+  app:
+    build: .
+    # YA NO EXPONEMOS PUERTOS AL HOST.
+    # La comunicación será interna a través de la red de Docker.
+    # ports:
+    #   - "7171:7070"
+    environment:
+      - DB_HOST=db
+    networks:
+      - taller-net
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:15-alpine
+    container_name: mi-postgres-compose
+    environment:
+      - POSTGRES_PASSWORD=mysecretpassword
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - taller-net
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  taller-net:
+    driver: bridge
+
+volumes:
+  db-data:
